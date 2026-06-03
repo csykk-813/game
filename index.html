@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>扑克牌随机抽卡</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            color: #f8f9fa;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            color: #adb5bd;
+            margin-bottom: 30px;
+        }
+        
+        .card-display {
+            position: relative;
+            width: 200px;
+            height: 280px;
+            margin: 0 auto 40px;
+            perspective: 1000px;
+        }
+        
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+        
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .card-front {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            color: #333;
+            transform: rotateY(180deg);
+        }
+        
+        .card-back {
+            background: linear-gradient(145deg, #dc3545 0%, #c82333 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .card-back::before {
+            content: "♠♥♣♦";
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.1);
+            transform: rotate(45deg);
+        }
+        
+        .card-rank {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .card-suit {
+            font-size: 5rem;
+        }
+        
+        .card-info {
+            font-size: 1.2rem;
+            margin-top: 15px;
+            color: #666;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+        
+        .draw-btn {
+            background: linear-gradient(145deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .draw-btn:hover, .draw-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 123, 255, 0.4);
+        }
+        
+        .draw-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .history {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            width: 100%;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .history h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #f8f9fa;
+        }
+        
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .history-card {
+            width: 50px;
+            height: 70px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            color: #333;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            padding: 5px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #adb5bd;
+            margin-top: 5px;
+        }
+        
+        .suit-red { color: #dc3545; }
+        .suit-black { color: #212529; }
+        
+        @media (max-width: 480px) {
+            h1 { font-size: 1.8rem; }
+            .card-display { width: 180px; height: 252px; }
+            .card-rank { font-size: 3.5rem; }
+            .card-suit { font-size: 4rem; }
+            .draw-btn { padding: 16px 25px; font-size: 1.1rem; }
+        }
+        
+        @media (max-width: 360px) {
+            h1 { font-size: 1.6rem; }
+            .card-display { width: 160px; height: 224px; }
+            .draw-btn { padding: 14px 20px; }
+        }
+        
+        .instructions {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎴 扑克牌随机抽卡</h1>
+        <p class="subtitle">54张标准扑克牌，每次随机抽取一张</p>
+        
+        <div class="card-display">
+            <div class="card" id="card">
+                <div class="card-front" id="cardFront">
+                    <div class="card-rank" id="cardRank">A</div>
+                    <div class="card-suit" id="cardSuit">♠</div>
+                    <div class="card-info" id="cardInfo">黑桃A</div>
+                </div>
+                <div class="card-back"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="draw-btn" id="drawBtn">随机抽卡</button>
+            <p class="instructions">点击抽卡按钮或直接点击卡牌进行抽卡</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="drawCount">0</div>
+                <div class="stat-label">已抽次数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="remainingCount">54</div>
+                <div class="stat-label">剩余牌数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uniqueCount">0</div>
+                <div class="stat-label">不重复牌</div>
+            </div>
+        </div>
+        
+        <div class="history">
+            <h3>抽卡历史</h3>
+            <div class="history-list" id="historyList">
+                <!-- 历史记录会动态添加到这里 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 扑克牌数据
+        const suits = [
+            { symbol: '♠', name: '黑桃', color: 'black' },
+            { symbol: '♥', name: '红桃', color: 'red' },
+            { symbol: '♣', name: '梅花', color: 'black' },
+            { symbol: '♦', name: '方块', color: 'red' }
+        ];
+        
+        const ranks = [
+            { symbol: 'A', name: 'A' },
+            { symbol: '2', name: '2' },
+            { symbol: '3', name: '3' },
+            { symbol: '4', name: '4' },
+            { symbol: '5', name: '5' },
+            { symbol: '6', name: '6' },
+            { symbol: '7', name: '7' },
+            { symbol: '8', name: '8' },
+            { symbol: '9', name: '9' },
+            { symbol: '10', name: '10' },
+            { symbol: 'J', name: 'J' },
+            { symbol: 'Q', name: 'Q' },
+            { symbol: 'K', name: 'K' }
+        ];
+        
+        // 创建完整的54张牌（包括大小王）
+        let deck = [];
+        
+        // 添加52张普通牌
+        suits.forEach(suit => {
+            ranks.forEach(rank => {
+                deck.push({
+                    suit: suit.symbol,
+                    suitName: suit.name,
+                    suitColor: suit.color,
+                    rank: rank.symbol,
+                    rankName: rank.name,
+                    name: suit.name + rank.name,
+                    isJoker: false
+                });
+            });
+        });
+        
+        // 添加大小王
+        deck.push({
+            suit: '🃏',
+            suitName: '小王',
+            suitColor: 'multi',
+            rank: 'J',
+            rankName: '小王',
+            name: '小王',
+            isJoker: true
+        });
+        
+        deck.push({
+            suit: '🃏',
+            suitName: '大王',
+            suitColor: 'multi',
+            rank: 'J',
+            rankName: '大王',
+            name: '大王',
+            isJoker: true
+        });
+        
+        // 游戏状态
+        let remainingDeck = [...deck];
+        let drawnCards = [];
+        let uniqueCards = new Set();
+        let drawCount = 0;
+        
+        // DOM元素
+        const cardElement = document.getElementById('card');
+        const cardRankElement = document.getElementById('cardRank');
+        const cardSuitElement = document.getElementById('cardSuit');
+        const cardInfoElement = document.getElementById('cardInfo');
+        const drawBtn = document.getElementById('drawBtn');
+        const historyList = document.getElementById('historyList');
+        const drawCountElement = document.getElementById('drawCount');
+        const remainingCountElement = document.getElementById('remainingCount');
+        const uniqueCountElement = document.getElementById('uniqueCount');
+        
+        // 更新统计信息
+        function updateStats() {
+            drawCountElement.textContent = drawCount;
+            remainingCountElement.textContent = remainingDeck.length;
+            uniqueCountElement.textContent = uniqueCards.size;
+            
+            // 如果牌抽完了，禁用按钮
+            if (remainingDeck.length === 0) {
+                drawBtn.disabled = true;
+                drawBtn.textContent = '牌已抽完';
+            }
+        }
+        
+        // 随机抽取一张牌
+        function drawCard() {
+            if (remainingDeck.length === 0) {
+                alert('所有牌都已抽完！点击"重新开始"可以重新开始游戏。');
+                return null;
+            }
+            
+            // 随机选择一张牌
+            const randomIndex = Math.floor(Math.random() * remainingDeck.length);
+            const drawnCard = remainingDeck[randomIndex];
+            
+            // 从剩余牌堆中移除
+            remainingDeck.splice(randomIndex, 1);
+            
+            // 添加到已抽牌堆
+            drawnCards.unshift(drawnCard);
+            
+            // 添加到不重复集合
+            uniqueCards.add(drawnCard.name);
+            
+            // 增加抽卡计数
+            drawCount++;
+            
+            return drawnCard;
+        }
+        
+        // 显示抽到的牌
+        function displayCard(card) {
+            // 更新卡牌内容
+            cardRankElement.textContent = card.rank;
+            cardSuitElement.textContent = card.suit;
+            cardInfoElement.textContent = card.name;
+            
+            // 设置颜色
+            if (card.isJoker) {
+                cardRankElement.className = 'card-rank';
+                cardSuitElement.className = 'card-suit';
+                cardRankElement.style.color = '#ff6b6b';
+                cardSuitElement.style.color = '#4ecdc4';
+            } else {
+                cardRankElement.className = 'card-rank';
+                cardSuitElement.className = 'card-suit';
+                if (card.suitColor === 'red') {
+                    cardRankElement.classList.add('suit-red');
+                    cardSuitElement.classList.add('suit-red');
+                } else {
+                    cardRankElement.classList.add('suit-black');
+                    cardSuitElement.classList.add('suit-black');
+                }
+            }
+            
+            // 添加历史记录
+            addToHistory(card);
+            
+            // 更新统计信息
+            updateStats();
+            
+            // 翻转卡牌动画
+            cardElement.classList.remove('flipped');
+            void cardElement.offsetWidth; // 触发重排
+            cardElement.classList.add('flipped');
+        }
+        
+        // 添加到历史记录
+        function addToHistory(card) {
+            const historyCard = document.createElement('div');
+            historyCard.className = 'history-card';
+            
+            const rankElement = document.createElement('div');
+            rankElement.textContent = card.rank;
+            rankElement.style.fontSize = '1rem';
+            rankElement.style.fontWeight = 'bold';
+            
+            const suitElement = document.createElement('div');
+            suitElement.textContent = card.suit;
+            suitElement.style.fontSize = '1.5rem';
+            
+            if (card.isJoker) {
+                suitElement.style.color = '#ff6b6b';
+                rankElement.style.color = '#4ecdc4';
+            } else if (card.suitColor === 'red') {
+                suitElement.style.color = '#dc3545';
+                rankElement.style.color = '#dc3545';
+            } else {
+                suitElement.style.color = '#212529';
+                rankElement.style.color = '#212529';
+            }
+            
+            historyCard.appendChild(rankElement);
+            historyCard.appendChild(suitElement);
+            
+            // 添加到历史列表开头
+            historyList.insertBefore(historyCard, historyList.firstChild);
+            
+            // 限制历史记录数量
+            if (historyList.children.length > 12) {
+                historyList.removeChild(historyList.lastChild);
+            }
+        }
+        
+        // 重新开始游戏
+        function restartGame() {
+            remainingDeck = [...deck];
+            drawnCards = [];
+            uniqueCards.clear();
+            drawCount = 0;
+            
+            // 清空历史记录
+            historyList.innerHTML = '';
+            
+            // 重置卡牌显示
+            cardElement.classList.remove('flipped');
+            cardRankElement.textContent = 'A';
+            cardSuitElement.textContent = '♠';
+            cardInfoElement.textContent = '黑桃A';
+            cardRankElement.className = 'card-rank suit-black';
+            cardSuitElement.className = 'card-suit suit-black';
+            
+            // 启用按钮
+            drawBtn.disabled = false;
+            drawBtn.textContent = '随机抽卡';
+            
+            // 更新统计
+            updateStats();
+        }
+        
+        // 事件监听
+        drawBtn.addEventListener('click', () => {
+            const card = drawCard();
+            if (card) {
+                displayCard(card);
+            }
+        });
+        
+        cardElement.addEventListener('click', () => {
+            if (remainingDeck.length > 0) {
+                const card = drawCard();
+                if (card) {
+                    displayCard(card);
+                }
+            }
+        });
+        
+        // 添加重新开始按钮
+        const restartBtn = document.createElement('button');
+        restartBtn.className = 'draw-btn';
+        restartBtn.textContent = '重新开始';
+        restartBtn.style.background = 'linear-gradient(145deg, #28a745 0%, #1e7e34 100%)';
+        restartBtn.style.marginTop = '10px';
+        restartBtn.addEventListener('click', restartGame);
+        
+        document.querySelector('.controls').appendChild(restartBtn);
+        
+        // 初始化统计信息
+        updateStats();
+        
+        // 初始显示一张牌
+        setTimeout(() => {
+            const initialCard = deck[0]; // 黑桃A
+            displayCard(initialCard);
+            remainingDeck = remainingDeck.filter(card => card !== initialCard);
+            drawnCards.push(initialCard);
+            uniqueCards.add(initialCard.name);
+            drawCount = 1;
+            updateStats();
+        }, 500);
+        
+        // 添加触摸事件支持
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        cardElement.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        
+        cardElement.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            // 如果移动距离很小，视为点击
+            if (Math.abs(touchEndX - touchStartX) < 10 && Math.abs(touchEndY - touchStartY) < 10) {
+                if (remainingDeck.length > 0) {
+                    const card = drawCard();
+                    if (card) {
+                        displayCard(card);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
